@@ -18,3 +18,11 @@ class Config(object):
             number_of_milestones_to_find=1000,
             number_of_neighbors_to_connect=15
         )
+        self.rrt_config = dict(
+            k_nearest_to_connect_to_dest=30,
+            steer_eta=4
+        )
+        self.srm_rrt_config = dict(
+            k_nearest_to_connect_to_dest=30,
+            steer_eta=4
+        )
