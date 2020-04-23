@@ -5,6 +5,7 @@ import time
 import matplotlib.pyplot as plt
 import gc
 from config import *
+from arr2_epec_seg_ex import *
 
 
 def generate_path(path, robots, obstacles, destination):

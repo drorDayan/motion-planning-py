@@ -48,6 +48,8 @@ class DrrtNode:
 def direction_oracle(prm_graphs, robot_num, near, new_point):
     res_arr = [0 for _ in range(2*robot_num)]
     for rid in range(robot_num):
+        # print(near[2*rid], near[2*rid+1])
+        # print(prm_graphs[rid].points_to_nodes)
         x = prm_graphs[rid].points_to_nodes[sr_prm.xy_to_2n_d_point(near[2*rid], near[2*rid+1])]
         next_p = random.choice(x.connections).point  # TODO this is rand, not direction
         res_arr[2*rid], res_arr[2*rid+1] = next_p[0], next_p[1]
@@ -62,7 +64,6 @@ def try_connect_to_dest(graph, neighbor_finder, dest_point, collision_detector):
             graph[dest_point] = DrrtNode(dest_point, graph[neighbor])
             return True
     return False
-
 
 
 def generate_path(path, robots, obstacles, destination):
@@ -85,8 +86,8 @@ def generate_path(path, robots, obstacles, destination):
 
     for rid in range(robot_num):
         is_valid, g = sr_prm.generate_graph(obstacles,
-                                            Point_d(2, [start_point[rid], start_point[rid+1]]),
-                                            Point_d(2, [dest_point[rid], dest_point[rid+1]]),
+                                            Point_d(2, [start_point[2*rid], start_point[2*rid+1]]),
+                                            Point_d(2, [dest_point[2*rid], dest_point[2*rid+1]]),
                                             prm_cd)
         if not is_valid:
             print("robot", rid, "failed to find a valid path in prm")
