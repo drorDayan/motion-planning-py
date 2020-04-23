@@ -35,7 +35,7 @@ class PrmGraph:
         if p1 not in self.points_to_nodes.keys() or p2 not in self.points_to_nodes.keys():
             return False
         q = queue.Queue()
-        visited = {p1:True}
+        visited = {p1: True}
         q.put(p1)
         while not q.empty():
             curr = q.get()
@@ -72,10 +72,10 @@ def make_graph(nn, cd, milestones):
     g = PrmGraph()
     for milestone in milestones:
         # the + 1 to number_of_neighbors is to count for count v as it's neighbor
-        nearest = nn.tree_k_nn(milestone, Config().sr_prm_config['number_of_neighbors_to_connect'])
+        nearest = nn.k_nn(milestone, Config().sr_prm_config['number_of_neighbors_to_connect'])
         for neighbor in nearest[1:]:  # first point is self and no need for edge from v to itself
-            if cd.path_collision_free(milestone, neighbor[0]):
-                g.insert_edge(milestone, neighbor[0])
+            if cd.path_collision_free(milestone, neighbor):
+                g.insert_edge(milestone, neighbor)
     return g
 
 

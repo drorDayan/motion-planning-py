@@ -121,8 +121,13 @@ class CollisionDetectorFast:
     # True if collision free
     # False, if not
     def path_collision_free(self, p1, p2):
+        if isinstance(p1, srpb.Point_d):
+            p1 = srpb.Point_2(p1[0], p1[1])
+        if isinstance(p2, srpb.Point_d):
+            p2 = srpb.Point_2(p2[0], p2[1])
+
         # check for obs collision
-        return srpb.do_intersect(self.obstacles_arrangement, srpb.Curve_2(p1, p2))
+        return not srpb.do_intersect(self.obstacles_arrangement, srpb.Curve_2(p1, p2))
 
 
 # noinspection PyArgumentList
@@ -144,12 +149,18 @@ class CollisionDetectorSlow:
         self.point_locator = srpb.Arr_landmarks_point_location(single_arrangement)
 
     def is_valid_conf(self, p):
+        if isinstance(p, srpb.Point_d):
+            p = srpb.Point_2(p[0], p[1])
         return is_in_free_face(self.point_locator, p)
 
     # checks for collisions return:
     # True if collision free
     # False, if not
     def path_collision_free(self, p1, p2):
+        if isinstance(p1, srpb.Point_d):
+            p1 = srpb.Point_2(p1[0], p1[1])
+        if isinstance(p2, srpb.Point_d):
+            p2 = srpb.Point_2(p2[0], p2[1])
         robot_path_len = (p2.x() - p1.x()) * (p2.x() - p1.x()) + (p2.y() - p1.y()) * (p2.y() - p1.y())
         sample_amount = srpb.FT(sqrt(robot_path_len.to_double())) / CollisionDetectorSlow.inflation_epsilon + srpb.FT(1)
         diff_vec = [((p2[i] - p1[i]) / sample_amount) for i in range(2)]
