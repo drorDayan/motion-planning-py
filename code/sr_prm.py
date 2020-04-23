@@ -1,10 +1,30 @@
 from config import *
-import arr2_epec_seg_ex as srpb
 import time
-from sr_collision_detector import CollisionDetectorSlow, CollisionDetectorFast
 import random
 from sr_neighbor_finder import NeighborsFinder
 import queue
+
+ROBOTS_COUNT = Config().general_config['ROBOTS_COUNT']
+if ROBOTS_COUNT is None:
+    from arr2_epec_seg_ex import *
+elif ROBOTS_COUNT == 2:
+    from libs.release_cgal_binddings.d4.arr2_epec_seg_ex import *
+elif ROBOTS_COUNT == 3:
+    from libs.release_cgal_binddings.d6.arr2_epec_seg_ex import *
+elif ROBOTS_COUNT == 4:
+    from libs.release_cgal_binddings.d8.arr2_epec_seg_ex import *
+elif ROBOTS_COUNT == 5:
+    from libs.release_cgal_binddings.d10.arr2_epec_seg_ex import *
+elif ROBOTS_COUNT == 6:
+    from libs.release_cgal_binddings.d12.arr2_epec_seg_ex import *
+elif ROBOTS_COUNT == 7:
+    from libs.release_cgal_binddings.d14.arr2_epec_seg_ex import *
+elif ROBOTS_COUNT == 8:
+    from libs.release_cgal_binddings.d16.arr2_epec_seg_ex import *
+elif ROBOTS_COUNT == 9:
+    from libs.release_cgal_binddings.d18.arr2_epec_seg_ex import *
+elif ROBOTS_COUNT == 10:
+    from libs.release_cgal_binddings.d20.arr2_epec_seg_ex import *
 
 
 class PrmNode:
@@ -50,6 +70,16 @@ class PrmGraph:
         return False
 
 
+def two_d_point_to_2n_d_point(p):
+    n = Config().general_config['ROBOTS_COUNT']
+    return Point_d(2*n, [p[0], p[1]] + [FT(Gmpq(0))] * (2*(n-1)))
+
+
+def xy_to_2n_d_point(x, y):
+    n = Config().general_config['ROBOTS_COUNT']
+    return Point_d(2*n, [x, y] + [FT(Gmpq(0))] * (2*(n-1)))
+
+
 def get_min_max(obstacles):
     max_x = max(max(v.x() for v in obs) for obs in obstacles)
     max_y = max(max(v.y() for v in obs) for obs in obstacles)
@@ -61,10 +91,10 @@ def get_min_max(obstacles):
 def generate_milestones(cd, n, max_x, max_y, min_x, min_y):
     v = []
     while len(v) < n:
-        x = srpb.FT(random.uniform(min_x, max_x))
-        y = srpb.FT(random.uniform(min_y, max_y))
-        if cd.is_valid_conf(srpb.Point_2(x, y)):
-            v.append(srpb.Point_d(2, [x, y]))
+        x = FT(random.uniform(min_x, max_x))
+        y = FT(random.uniform(min_y, max_y))
+        if cd.is_valid_conf(Point_2(x, y)):
+            v.append(xy_to_2n_d_point(x, y))
     return v
 
 
@@ -79,15 +109,11 @@ def make_graph(nn, cd, milestones):
     return g
 
 
-def generate_graph(obstacles, origin, destination, robot_width):
+def generate_graph(obstacles, origin, destination, cd):
     # start = time.time()
+    origin = two_d_point_to_2n_d_point(origin)
+    destination = two_d_point_to_2n_d_point(destination)
     max_x, max_y, min_x, min_y = get_min_max(obstacles)
-    if Config().general_config['USE_FAST_CD']:
-        cd = CollisionDetectorFast(robot_width, obstacles)
-    else:
-        cd = CollisionDetectorSlow(robot_width, obstacles)
-    # origin = srpb.Point_2(srpb.FT(origin.x()), srpb.FT(origin.y()))
-    # destination = srpb.Point_2(srpb.FT(destination.x()), srpb.FT(destination.y()))
     if not cd.is_valid_conf(origin) or not cd.is_valid_conf(destination):
         print("invalid input")
         return False
