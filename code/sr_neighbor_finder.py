@@ -10,6 +10,7 @@ class NeighborsFinder:
         search_nearest = True
         sort_neighbors = True
         epsilon = srpb.FT(0)
+
         search = srpb.K_neighbor_search(self.tree, query, k, epsilon, search_nearest, srpb.Euclidean_distance(),
                                         sort_neighbors)
         lst = []

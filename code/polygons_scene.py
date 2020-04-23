@@ -248,7 +248,7 @@ if __name__ == "__main__":
   ps = Polygons_scene()
   gui.set_program_name("Multi-robot Motion Planning")
   gui.set_field(0, "data/scenes/pabbles_3_0")
-  gui.set_field(3, "srm_rrt")
+  gui.set_field(3, "drrt")
   gui.set_field(4, "path0.txt")
   gui.set_field(5, "run_tests")
   #gui.set_field(5, "path_out.txt")

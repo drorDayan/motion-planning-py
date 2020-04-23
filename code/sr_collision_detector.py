@@ -112,6 +112,11 @@ class CollisionDetectorFast:
         self.obstacles_point_locator = srpb.Arr_trapezoid_ric_point_location(self.obstacles_arrangement)
         self.robot_width = robot_width.to_double()
 
+    def is_valid_conf(self, p):
+        if isinstance(p, srpb.Point_d):
+            p = srpb.Point_2(p[0], p[1])
+        return is_in_free_face(self.obstacles_point_locator, p)
+
     # checks for collisions return:
     # True if collision free
     # False, if not

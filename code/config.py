@@ -26,3 +26,6 @@ class Config(object):
             k_nearest_to_connect_to_dest=30,
             steer_eta=4
         )
+        self.drrt_config = dict(
+            steer_eta=4
+        )

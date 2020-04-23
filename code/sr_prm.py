@@ -55,7 +55,7 @@ def get_min_max(obstacles):
     max_y = max(max(v.y() for v in obs) for obs in obstacles)
     min_x = min(min(v.x() for v in obs) for obs in obstacles)
     min_y = min(min(v.y() for v in obs) for obs in obstacles)
-    return max_x, max_y, min_x, min_y
+    return max_x.to_double(), max_y.to_double(), min_x.to_double(), min_y.to_double()
 
 
 def generate_milestones(cd, n, max_x, max_y, min_x, min_y):
@@ -64,7 +64,7 @@ def generate_milestones(cd, n, max_x, max_y, min_x, min_y):
         x = srpb.FT(random.uniform(min_x, max_x))
         y = srpb.FT(random.uniform(min_y, max_y))
         if cd.is_valid_conf(srpb.Point_2(x, y)):
-            v.append(srpb.Point_2(x, y))
+            v.append(srpb.Point_d(2, [x, y]))
     return v
 
 
@@ -79,16 +79,15 @@ def make_graph(nn, cd, milestones):
     return g
 
 
-def generate_graph(obstacles0, origin, destination, robot_width):
+def generate_graph(obstacles, origin, destination, robot_width):
     # start = time.time()
-    obstacles = [[srpb.Point_2(p.x(), p.y()) for p in obs] for obs in obstacles0]
     max_x, max_y, min_x, min_y = get_min_max(obstacles)
     if Config().general_config['USE_FAST_CD']:
-        cd = CollisionDetectorFast(srpb.FT(robot_width.to_double()), obstacles)
+        cd = CollisionDetectorFast(robot_width, obstacles)
     else:
-        cd = CollisionDetectorSlow(srpb.FT(robot_width.to_double()), obstacles)
-    origin = srpb.Point_2(srpb.FT(origin.x()), srpb.FT(origin.y()))
-    destination = srpb.Point_2(srpb.FT(destination.x()), srpb.FT(destination.y()))
+        cd = CollisionDetectorSlow(robot_width, obstacles)
+    # origin = srpb.Point_2(srpb.FT(origin.x()), srpb.FT(origin.y()))
+    # destination = srpb.Point_2(srpb.FT(destination.x()), srpb.FT(destination.y()))
     if not cd.is_valid_conf(origin) or not cd.is_valid_conf(destination):
         print("invalid input")
         return False
@@ -97,6 +96,7 @@ def generate_graph(obstacles0, origin, destination, robot_width):
     nn = NeighborsFinder(milestones)
     g = make_graph(nn, cd, milestones)
     if g.has_path(origin, destination):
-        return g
+        return True, g
     else:
         print("failed to find a valid path in prm")
+        return False, PrmGraph()

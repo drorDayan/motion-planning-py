@@ -1,4 +1,5 @@
 from config import *
+from math import sqrt
 ROBOTS_COUNT = Config().general_config['ROBOTS_COUNT']
 if ROBOTS_COUNT is None:
     from arr2_epec_seg_ex import *
@@ -20,7 +21,6 @@ elif ROBOTS_COUNT == 9:
     from libs.release_cgal_binddings.d18.arr2_epec_seg_ex import *
 elif ROBOTS_COUNT == 10:
     from libs.release_cgal_binddings.d20.arr2_epec_seg_ex import *
-from math import sqrt
 
 
 def get_min_max(obstacles):
