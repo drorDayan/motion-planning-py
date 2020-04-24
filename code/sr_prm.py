@@ -48,8 +48,11 @@ class PrmGraph:
             self.points_to_nodes[p2] = p2_node
         else:
             p2_node = self.points_to_nodes[p2]
-        p1_node.connections.append(p2_node)
-        p2_node.connections.append(p1_node)
+        if p1_node == p2_node:
+            return
+        dist = Euclidean_distance().transformed_distance(p1_node.point, p2_node.point)
+        p1_node.connections.append((p2_node, dist))
+        p2_node.connections.append((p1_node, dist))
 
     def has_path(self, p1, p2):
         if p1 not in self.points_to_nodes.keys() or p2 not in self.points_to_nodes.keys():
@@ -62,7 +65,7 @@ class PrmGraph:
             if curr == p2:
                 return True
             else:
-                for next_n in self.points_to_nodes[curr].connections:
+                for next_n, _ in self.points_to_nodes[curr].connections:
                     next_p = next_n.point
                     if next_p not in visited:
                         visited[next_p] = True
