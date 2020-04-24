@@ -3,6 +3,8 @@ import time
 import random
 from sr_neighbor_finder import NeighborsFinder
 import queue
+import heapq
+import math
 
 ROBOTS_COUNT = Config().general_config['ROBOTS_COUNT']
 if ROBOTS_COUNT is None:
@@ -30,7 +32,8 @@ elif ROBOTS_COUNT == 10:
 class PrmNode:
     def __init__(self, pt):
         self.point = pt
-        self.connections = []
+        self.connections = {}
+        self.dist_from_t = None
 
 
 class PrmGraph:
@@ -50,9 +53,9 @@ class PrmGraph:
             p2_node = self.points_to_nodes[p2]
         if p1_node == p2_node:
             return
-        dist = Euclidean_distance().transformed_distance(p1_node.point, p2_node.point)
-        p1_node.connections.append((p2_node, dist))
-        p2_node.connections.append((p1_node, dist))
+        dist = math.sqrt(Euclidean_distance().transformed_distance(p1_node.point, p2_node.point).to_double())
+        p1_node.connections[p2_node] = dist
+        p2_node.connections[p1_node] = dist
 
     def has_path(self, p1, p2):
         if p1 not in self.points_to_nodes.keys() or p2 not in self.points_to_nodes.keys():
@@ -65,12 +68,32 @@ class PrmGraph:
             if curr == p2:
                 return True
             else:
-                for next_n, _ in self.points_to_nodes[curr].connections:
+                for next_n in self.points_to_nodes[curr].connections.keys():
                     next_p = next_n.point
                     if next_p not in visited:
                         visited[next_p] = True
                         q.put(next_p)
         return False
+
+    def calc_dist_from_t(self, t):
+        if t not in self.points_to_nodes.keys():
+            return False
+        self.points_to_nodes[t].dist_from_t = 0
+        temp_i = 0
+        q = [(0, temp_i, t)]
+        heapq.heapify(q)
+        visited = {t: True}
+        while len(q) > 0:
+            c_dist, _, curr = heapq.heappop(q)
+            curr_n = self.points_to_nodes[curr]
+            for next_n in curr_n.connections.keys():
+                next_p = next_n.point
+                if next_p not in visited:
+                    next_n.dist_from_t = c_dist + next_n.connections[curr_n]
+                    visited[next_p] = True
+                    temp_i += 1
+                    heapq.heappush(q, (next_n.dist_from_t, temp_i, next_p))
+        return True
 
 
 def two_d_point_to_2n_d_point(p):
@@ -125,6 +148,7 @@ def generate_graph(obstacles, origin, destination, cd):
     nn = NeighborsFinder(milestones)
     g = make_graph(nn, cd, milestones)
     if g.has_path(origin, destination):
+        g.calc_dist_from_t(destination)
         return True, g
     else:
         print("failed to find a valid path in prm")

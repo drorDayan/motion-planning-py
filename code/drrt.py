@@ -53,7 +53,7 @@ def direction_oracle(prm_graphs, robot_num, near, new_point):
     res_arr = [0 for _ in range(2*robot_num)]
     for rid in range(robot_num):
         x = prm_graphs[rid].points_to_nodes[sr_prm.xy_to_2n_d_point(near[2*rid], near[2*rid+1])]
-        next_p = random.choice(x.connections)[0].point  # TODO this is rand, not direction
+        next_p = random.choice(list(x.connections.keys())).point  # TODO this is rand, not direction
         res_arr[2*rid], res_arr[2*rid+1] = next_p[0], next_p[1]
     return Point_d(2*robot_num, res_arr)
 
