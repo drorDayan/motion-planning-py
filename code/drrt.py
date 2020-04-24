@@ -107,7 +107,8 @@ def expand(robot_num, min_coord, max_coord, neighbor_finder, prm_graphs, vertice
 def generate_path(path, robots, obstacles, destination):
     # random.seed(1)  # for tests
     # init config stuff
-    start = time.time()
+    start_time = time.time()
+    timeout = Config().drrt_config['timeout']
     robot_num = len(robots)
     robot_width = FT(1)
     min_coord, max_coord = get_min_max(obstacles)
@@ -121,19 +122,23 @@ def generate_path(path, robots, obstacles, destination):
     validate_input(robots, destination, robot_width)
 
     prm_graphs = create_prm_graphs(robot_num, obstacles, start_point, dest_point, robot_width)
-    print("finished with prm maps, time= ", time.time() - start)
+    print("finished with prm maps, time= ", time.time() - start_time)
 
     vertices = [start_point]
     graph = {start_point: DrrtNode(start_point)}
     neighbor_finder = NeighborsFinder(vertices)
     connected = False
+
     while not connected:
         expand(robot_num, min_coord, max_coord, neighbor_finder, prm_graphs, vertices, robots_collision_detector, graph)
         connected = try_connect_to_dest(graph, neighbor_finder, dest_point, connector_cd)
+        if timeout is not None and (time.time() - start_time > timeout):
+            print("dRRT timed out")
+            return
 
     # write path to output
     d_path = []
     graph[dest_point].get_path_to_here(d_path)
     for dp in d_path:
         path.append([Point_2(dp[2*i], dp[2*i+1]) for i in range(robot_num)])
-    print("finished, time= ", time.time() - start, "vertices amount: ", len(vertices))
+    print("finished, time= ", time.time() - start_time, "vertices amount: ", len(vertices))
