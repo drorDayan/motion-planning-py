@@ -5,6 +5,7 @@ from sr_neighbor_finder import NeighborsFinder
 import queue
 import heapq
 import math
+import numpy as np
 
 ROBOTS_COUNT = Config().general_config['ROBOTS_COUNT']
 if ROBOTS_COUNT is None:
@@ -122,6 +123,21 @@ class PrmGraph:
                         heapq.heappush(q, (next_n.real_dist_from_t, temp_i, next_p))
         return True
 
+    def sr_direction_oracle(self, source, direction):
+        direction_vec = np.array([direction[0].to_double(), direction[1].to_double()])
+        direction_norm = np.linalg.norm(direction_vec)
+        source_n = self.points_to_nodes[source]
+        max_cos = 0
+        found_neighbor = None
+        for neighbor in source_n.connections.keys():
+            neighbor_vec = np.array([neighbor.point[0].to_double()-source[0].to_double(),
+                                     neighbor.point[1].to_double()-source[1].to_double()])
+            neighbor_norm = np.linalg.norm(neighbor_vec)
+            neighbor_res = abs(np.dot(direction_vec, neighbor_vec)/(direction_norm * neighbor_norm))
+            if neighbor_res > max_cos:
+                max_cos = neighbor_res
+                found_neighbor = neighbor.point
+        return found_neighbor
 
 
 def two_d_point_to_2n_d_point(p):
