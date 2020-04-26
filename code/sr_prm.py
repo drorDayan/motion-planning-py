@@ -33,7 +33,10 @@ class PrmNode:
     def __init__(self, pt):
         self.point = pt
         self.connections = {}
-        self.dist_from_t = None
+        self.bfs_dist_from_t = None
+        self.father_in_bfs_dist_from_t = None
+        self.real_dist_from_t = None
+        self.father_in_dist_from_t = None
 
 
 class PrmGraph:
@@ -75,10 +78,10 @@ class PrmGraph:
                         q.put(next_p)
         return False
 
-    def calc_dist_from_t(self, t):
+    def calc_bfs_dist_from_t(self, t):
         if t not in self.points_to_nodes.keys():
             return False
-        self.points_to_nodes[t].dist_from_t = 0
+        self.points_to_nodes[t].bfs_dist_from_t = 0
         temp_i = 0
         q = [(0, temp_i, t)]
         heapq.heapify(q)
@@ -89,11 +92,36 @@ class PrmGraph:
             for next_n in curr_n.connections.keys():
                 next_p = next_n.point
                 if next_p not in visited:
-                    next_n.dist_from_t = c_dist + next_n.connections[curr_n]
+                    next_n.bfs_dist_from_t = c_dist + 1
+                    next_n.father_in_bfs_dist_from_t = curr_n
                     visited[next_p] = True
                     temp_i += 1
-                    heapq.heappush(q, (next_n.dist_from_t, temp_i, next_p))
+                    heapq.heappush(q, (next_n.bfs_dist_from_t, temp_i, next_p))
         return True
+
+    def calc_real_dist_from_t(self, t):
+        if t not in self.points_to_nodes.keys():
+            return False
+        self.points_to_nodes[t].real_dist_from_t = 0
+        temp_i = 0
+        q = [(0, temp_i, t)]
+        heapq.heapify(q)
+        done = {}
+        while len(q) > 0:
+            c_dist, _, curr = heapq.heappop(q)
+            done[curr] = True
+            curr_n = self.points_to_nodes[curr]
+            for next_n in curr_n.connections.keys():
+                next_p = next_n.point
+                if next_p not in done:
+                    temp_i += 1
+                    alt = c_dist + next_n.connections[curr_n]
+                    if next_n.real_dist_from_t is None or alt < next_n.real_dist_from_t:
+                        next_n.real_dist_from_t = alt
+                        next_n.father_in_dist_from_t = curr_n
+                        heapq.heappush(q, (next_n.real_dist_from_t, temp_i, next_p))
+        return True
+
 
 
 def two_d_point_to_2n_d_point(p):
@@ -148,7 +176,8 @@ def generate_graph(obstacles, origin, destination, cd):
     nn = NeighborsFinder(milestones)
     g = make_graph(nn, cd, milestones)
     if g.has_path(origin, destination):
-        g.calc_dist_from_t(destination)
+        g.calc_bfs_dist_from_t(destination)
+        g.calc_real_dist_from_t(destination)
         return True, g
     else:
         print("failed to find a valid path in prm")

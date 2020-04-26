@@ -10,7 +10,7 @@ class Config(object):
     def reset(self):
         # General configuration
         self.general_config = dict(
-            ROBOTS_COUNT=8,  # Amount of robots. Should match scene file. If lower, excess robots are ignored.
+            ROBOTS_COUNT=3,  # Amount of robots. Should match scene file. If lower, excess robots are ignored.
             USE_FAST_CD=True,  # TODO not tested on false
             INFLATION_EPS=0.01
         )
