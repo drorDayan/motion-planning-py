@@ -38,6 +38,7 @@ class PrmNode:
         self.father_in_bfs_dist_from_t = None
         self.real_dist_from_t = None
         self.father_in_dist_from_t = None
+        self.srm_counter = Config().srm_drrt_config['sr_add_srm_once_in']
 
 
 class PrmGraph:
@@ -127,7 +128,7 @@ class PrmGraph:
         direction_vec = np.array([direction[0].to_double(), direction[1].to_double()])
         direction_norm = np.linalg.norm(direction_vec)
         source_n = self.points_to_nodes[source]
-        max_cos = 0
+        max_cos = -1
         found_neighbor = None
         for neighbor in source_n.connections.keys():
             neighbor_vec = np.array([neighbor.point[0].to_double()-source[0].to_double(),
@@ -137,6 +138,7 @@ class PrmGraph:
             if neighbor_res > max_cos:
                 max_cos = neighbor_res
                 found_neighbor = neighbor.point
+        assert found_neighbor is not None, "sr_direction_oracle is a bad boy, you should always have somewhere to go to"
         return found_neighbor
 
 

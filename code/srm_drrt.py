@@ -1,5 +1,6 @@
 from config import *
 from math import sqrt
+import matplotlib.pyplot as plt
 import random
 import time
 from neighbor_finder import NeighborsFinder
@@ -37,6 +38,7 @@ class DrrtNode:
     def __init__(self, pt, pr=None):
         self.point = pt
         self.parent = pr
+        self.srm_counter = Config().srm_drrt_config['mr_add_srm_once_in']
         if pr is None:
             self.cost = FT(0)
         else:
@@ -50,13 +52,25 @@ class DrrtNode:
         return ret_path
 
 
-def expand(robot_num, min_coord, max_coord, neighbor_finder, prm_graphs, vertices, robots_collision_detector, graph):
+# TODO this is not the way to do it by the paper
+def try_connect_to_dest(graph, neighbor_finder, dest_point, collision_detector):
+    nn = neighbor_finder.get_k_nearest(dest_point, Config().drrt_config['k_nearest_to_connect_to_dest'])
+    for neighbor in nn:
+        free = collision_detector.path_collision_free(neighbor, dest_point)
+        if free:
+            graph[dest_point] = DrrtNode(dest_point, graph[neighbor])
+            # print(graph[dest_point].cost)
+            return True
+        return False
+
+
+def expand(robot_num, min_coord, max_coord, neighbor_finder, prm_g, vertices, robots_collision_detector, graph):
     num_of_points_to_add_in_expand = Config().drrt_config['num_of_points_to_add_in_expand']
 
     for _ in range(num_of_points_to_add_in_expand):
         new_point = Point_d(2 * robot_num, [FT(random.uniform(min_coord, max_coord)) for _ in range(2 * robot_num)])
         near = neighbor_finder.get_nearest(new_point)
-        new = direction_oracle(prm_graphs, robot_num, near, new_point)
+        new = direction_oracle(prm_g, robot_num, near, new_point)
         if new in vertices:
             continue
         free = robots_collision_detector.path_collision_free(near, new)
@@ -64,50 +78,26 @@ def expand(robot_num, min_coord, max_coord, neighbor_finder, prm_graphs, vertice
             vertices.append(new)
             graph[new] = DrrtNode(new, graph[near])
             neighbor_finder.add_points([new])
-
-
-def try_connect_point_to_dest(graph, point, dest_point, robot_num, prm_graphs, robots_collision_detector):
-    depend = [[] for _ in range(robot_num)]
-    basic_arr = [point[i] for i in range(2 * robot_num)]
-    for rid in range(robot_num):
-        curr_node = prm_graphs[rid].points_to_nodes[sr_prm.xy_to_2n_d_point(point[2*rid], point[2*rid+1])]
-        curr_point = curr_node.point
-        while curr_node.father_in_dist_from_t is not None:
-            next_node = curr_node.father_in_dist_from_t
-            next_sr_point = next_node.point
-            basic_arr[2*rid], basic_arr[2*rid+1] = next_sr_point[0], next_sr_point[1]
-            next_point = Point_d(2*robot_num, basic_arr)
-            intersections = robots_collision_detector.srm_get_robot_intersection(curr_point, next_point, rid)
-            depend[rid] += intersections
-            curr_node = next_node
-            curr_point = next_point
-        basic_arr[2 * rid], basic_arr[2 * rid + 1] = point[2 * rid], point[2 * rid + 1]
-    order = []
-    robots_to_add = [i for i in range(robot_num)]
-    for _ in range(robot_num):
-        for rid in robots_to_add:
-            if len(depend[rid]) == 0:
-                order.append(rid)
-                robots_to_add.remove(rid)
-                for j in robots_to_add:
-                    depend[j] = list(filter(lambda a: a != rid, depend[j]))
-                break
-    if len(order) == robot_num:
-        print("can connect")  # TODO finish this function
-    print("can't connect")
-
-
-# TODO this is not the way to do it by the paper
-def try_connect_to_dest(graph, neighbor_finder, dest_point, collision_detector, robot_num, prm_graphs, robots_collision_detector):
-    nn = neighbor_finder.get_k_nearest(dest_point, Config().drrt_config['k_nearest_to_connect_to_dest'])
-    for neighbor in nn:
-        # try_connect_point_to_dest(graph, neighbor, dest_point, robot_num, prm_graphs, robots_collision_detector)
-        free = collision_detector.path_collision_free(neighbor, dest_point)
-        if free:
-            graph[dest_point] = DrrtNode(dest_point, graph[neighbor])
-            # print(graph[dest_point].cost)
-            return True
-        return False
+        else:
+            new_data = [near[j] for j in range(2 * robot_num)]
+            for rid in range(robot_num):
+                if prm_g[rid].points_to_nodes[sr_prm.xy_to_2n_d_point(new[2 * rid], new[2 * rid + 1])].srm_counter > 0:
+                    prm_g[rid].points_to_nodes[sr_prm.xy_to_2n_d_point(new[2 * rid], new[2 * rid + 1])].srm_counter -= 1
+                else:
+                    new_data[2 * rid] = new[2 * rid]
+                    new_data[2 * rid + 1] = new[2 * rid + 1]
+                    my_new = Point_d(2 * robot_num, new_data)
+                    if my_new in vertices:
+                        continue
+                    new_data[2 * rid] = near[2 * rid]
+                    new_data[2 * rid + 1] = near[2 * rid + 1]
+                    free = robots_collision_detector.srm_path_collision_free(near, my_new, rid)
+                    if free:
+                        vertices.append(my_new)
+                        graph[my_new] = DrrtNode(my_new, graph[near])
+                        neighbor_finder.add_points([my_new])
+                        prm_g[rid].points_to_nodes[sr_prm.xy_to_2n_d_point(new[2 * rid], new[2 * rid + 1])].srm_counter\
+                            = Config().srm_drrt_config['sr_add_srm_once_in']
 
 
 def generate_path(path, robots, obstacles, destination):
@@ -139,8 +129,8 @@ def generate_path(path, robots, obstacles, destination):
 
     while not connected:
         expand(robot_num, min_coord, max_coord, neighbor_finder, prm_graphs, vertices, robots_collision_detector, graph)
-        connected = try_connect_to_dest(graph, neighbor_finder, dest_point, connector_cd, robot_num, prm_graphs, robots_collision_detector)
-        # print("no srm, time= ", time.time() - start_time, "vertices amount: ", len(vertices))
+        connected = try_connect_to_dest(graph, neighbor_finder, dest_point, connector_cd)
+        # print("srm, time= ", time.time() - start_time, "vertices amount: ", len(vertices))
         # print_ver_graph(str(time.time() - start_time), vertices, robot_num)
         if timeout is not None and (time.time() - start_time > timeout):
             print("dRRT timed out")

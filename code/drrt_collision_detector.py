@@ -175,6 +175,15 @@ class RobotsCollisionDetector:
                 return False
         return True
 
+    def srm_get_robot_intersection(self, p1, p2, rid):
+        res = []
+        for j in range(self.robot_num):
+            if j == rid:
+                continue
+            if self.__two_robot_intersect(p1, p2, rid, j):
+                res.append(j)
+        return res
+
     def is_valid_conf(self, p):
         # for robot_index in range(self.robot_num):
         #     if not is_in_free_face(self.obstacles_point_locator, Point_2(p[robot_index*2], p[robot_index*2+1])):
