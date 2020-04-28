@@ -138,8 +138,8 @@ class PrmGraph:
             if neighbor_res > max_cos:
                 max_cos = neighbor_res
                 found_neighbor = neighbor.point
-        assert found_neighbor is not None, "sr_direction_oracle is a bad boy, you should always have somewhere to go to"
-        return found_neighbor
+        # the else in the next line will only happen if source is dest and not connected to anything
+        return found_neighbor if found_neighbor is not None else source
 
 
 def two_d_point_to_2n_d_point(p):

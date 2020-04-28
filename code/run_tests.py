@@ -11,7 +11,7 @@ from arr2_epec_seg_ex import *
 
 def generate_path(path, robots, obstacles, destination):
     print("running tests")
-    num_of_runs = 15
+    num_of_runs = 10
 
     print("srm_drrt:")
     for number_of_milestones_to_find in [10, 15, 25, 50]:
@@ -33,6 +33,8 @@ def generate_path(path, robots, obstacles, destination):
             print(t_sum / ok_r)
             print(t_v / ok_r)
             print(ok_r)
+        else:
+            print("0\n0\n0")
 
     print("drrt:")
     for number_of_milestones_to_find in [10, 15, 25, 35, 50, 70, 100]:
@@ -54,6 +56,8 @@ def generate_path(path, robots, obstacles, destination):
             print(t_sum / ok_r)
             print(t_v / ok_r)
             print(ok_r)
+        else:
+            print("0\n0\n0")
 
     # print("drrt:")
     # for number_of_milestones_to_find in [40, 60]:
