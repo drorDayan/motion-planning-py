@@ -31,7 +31,7 @@ elif ROBOTS_COUNT == 10:
 
 
 class PrmNode:
-    def __init__(self, pt):
+    def __init__(self, pt, is_sparse=False):
         self.point = pt
         self.connections = {}
         self.bfs_dist_from_t = None
@@ -39,28 +39,39 @@ class PrmNode:
         self.real_dist_from_t = None
         self.father_in_dist_from_t = None
         self.srm_counter = Config().srm_drrt_config['sr_add_srm_once_in']
+        self.is_sparse = is_sparse
+        self.sparse_connections = {}
 
 
 class PrmGraph:
     def __init__(self):
         self.points_to_nodes = {}
 
-    def insert_edge(self, p1, p2):
+    def add_node(self, p, is_sparse=False):
+        if p not in self.points_to_nodes.keys():
+            p1_node = PrmNode(p, is_sparse)
+            self.points_to_nodes[p] = p1_node
+
+    def insert_edge(self, p1, p2, is_sparse=False):
         if p1 not in self.points_to_nodes.keys():
-            p1_node = PrmNode(p1)
+            p1_node = PrmNode(p1, is_sparse=is_sparse)
             self.points_to_nodes[p1] = p1_node
         else:
             p1_node = self.points_to_nodes[p1]
         if p2 not in self.points_to_nodes.keys():
-            p2_node = PrmNode(p2)
+            p2_node = PrmNode(p2, is_sparse=is_sparse)
             self.points_to_nodes[p2] = p2_node
         else:
             p2_node = self.points_to_nodes[p2]
         if p1_node == p2_node:
             return
         dist = math.sqrt(Euclidean_distance().transformed_distance(p1_node.point, p2_node.point).to_double())
-        p1_node.connections[p2_node] = dist
-        p2_node.connections[p1_node] = dist
+        if is_sparse:
+            p1_node.sparse_connections[p2_node] = dist
+            p2_node.sparse_connections[p1_node] = dist
+        else:
+            p1_node.connections[p2_node] = dist
+            p2_node.connections[p1_node] = dist
 
     def has_path(self, p1, p2):
         if p1 not in self.points_to_nodes.keys() or p2 not in self.points_to_nodes.keys():
@@ -170,8 +181,18 @@ def generate_milestones(cd, n, max_x, max_y, min_x, min_y):
     return v
 
 
-def make_graph(nn, cd, milestones):
+def make_graph(cd, milestones, origin, destination):
+    sparse_nn = NeighborsFinder([origin, destination])
+    milestones += [origin, destination]
+    nn = NeighborsFinder(milestones)
     g = PrmGraph()
+    # init sparse graph
+    if cd.path_collision_free(origin, destination):
+        g.insert_edge(origin, destination, is_sparse=True)
+    else:
+        g.add_node(origin, is_sparse=True)
+        g.add_node(destination, is_sparse=True)
+
     for milestone in milestones:
         # the + 1 to number_of_neighbors is to count for count v as it's neighbor
         nearest = nn.k_nn(milestone, Config().sr_prm_config['number_of_neighbors_to_connect'])
@@ -190,9 +211,8 @@ def generate_graph(obstacles, origin, destination, cd):
         print("invalid input")
         return False
     number_of_points_to_find = Config().sr_prm_config['number_of_milestones_to_find']
-    milestones = [origin, destination] + generate_milestones(cd, number_of_points_to_find, max_x, max_y, min_x, min_y)
-    nn = NeighborsFinder(milestones)
-    g = make_graph(nn, cd, milestones)
+    milestones = generate_milestones(cd, number_of_points_to_find, max_x, max_y, min_x, min_y)
+    g = make_graph(cd, milestones, origin, destination)
     if g.has_path(origin, destination):
         g.calc_bfs_dist_from_t(destination)
         g.calc_real_dist_from_t(destination)
