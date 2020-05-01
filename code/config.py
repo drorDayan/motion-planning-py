@@ -15,7 +15,7 @@ class Config(object):
             INFLATION_EPS=0.01
         )
         self.sr_prm_config = dict(
-            number_of_milestones_to_find=150,
+            number_of_milestones_to_find=200,
             number_of_neighbors_to_connect=15,
             sparse_radius=1
         )

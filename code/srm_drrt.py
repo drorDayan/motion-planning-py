@@ -70,7 +70,7 @@ def expand(robot_num, min_coord, max_coord, neighbor_finder, prm_g, vertices, ro
     for _ in range(num_of_points_to_add_in_expand):
         new_point = Point_d(2 * robot_num, [FT(random.uniform(min_coord, max_coord)) for _ in range(2 * robot_num)])
         near = neighbor_finder.get_nearest(new_point)
-        new = direction_oracle(prm_g, robot_num, near, new_point)
+        new = direction_oracle(prm_g, robot_num, near, new_point, is_srm=True)
         if new in vertices:
             continue
         free = robots_collision_detector.path_collision_free(near, new)
@@ -117,7 +117,7 @@ def generate_path(path, robots, obstacles, destination):
 
     validate_input(robots, destination, robot_width)
 
-    prm_graphs = create_prm_graphs(robot_num, obstacles, start_point, dest_point, robot_width)
+    prm_graphs = create_prm_graphs(robot_num, obstacles, start_point, dest_point, robot_width, create_sparse=True)
     if len(prm_graphs) == 0:
         return 0, 0
     print("calculated prm maps, time= ", time.time() - start_time)

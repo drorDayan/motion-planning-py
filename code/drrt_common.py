@@ -33,19 +33,20 @@ elif ROBOTS_COUNT == 10:
     from libs.release_cgal_binddings.d20.arr2_epec_seg_ex import *
 
 
-def direction_oracle(prm_graphs, robot_num, near, new_point):
+def direction_oracle(prm_graphs, robot_num, near, new_point, is_srm=False):
     direction = [new_point[i]-near[i] for i in range(2*robot_num)]
     res_arr = [0 for _ in range(2*robot_num)]
     for rid in range(robot_num):
         next_p = prm_graphs[rid].sr_direction_oracle(sr_prm.xy_to_2n_d_point(near[2*rid], near[2*rid+1]),
-                                                     sr_prm.xy_to_2n_d_point(direction[2*rid], direction[2*rid+1]))
+                                                     sr_prm.xy_to_2n_d_point(direction[2*rid], direction[2*rid+1]),
+                                                     is_srm)
         # x = prm_graphs[rid].points_to_nodes[sr_prm.xy_to_2n_d_point(near[2*rid], near[2*rid+1])]
         # next_p = random.choice(list(x.connections.keys())).point  # TODO this is rand, not direction
         res_arr[2*rid], res_arr[2*rid+1] = next_p[0], next_p[1]
     return Point_d(2*robot_num, res_arr)
 
 
-def create_prm_graphs(robot_num, obstacles, start_point, dest_point, robot_width):
+def create_prm_graphs(robot_num, obstacles, start_point, dest_point, robot_width, create_sparse=False):
     if Config().general_config['USE_FAST_CD']:
         prm_cd = SRCollisionDetectorFast(robot_width, obstacles)
     else:
@@ -55,7 +56,7 @@ def create_prm_graphs(robot_num, obstacles, start_point, dest_point, robot_width
         is_valid, g = sr_prm.generate_graph(obstacles,
                                             Point_d(2, [start_point[2*rid], start_point[2*rid+1]]),
                                             Point_d(2, [dest_point[2*rid], dest_point[2*rid+1]]),
-                                            prm_cd)
+                                            prm_cd, create_sparse)
         if not is_valid:
             print("robot", rid, "failed to find a valid path in prm")
             return []

@@ -43,7 +43,6 @@ class PrmNode:
         self.is_sparse = is_sparse
         self.sparse_connections = {}
         self.sparse_rep = None
-        self.rep_of = {}
 
 
 class PrmGraph:
@@ -142,13 +141,17 @@ class PrmGraph:
                         heapq.heappush(q, (next_n.real_dist_from_t, temp_i, next_p))
         return True
 
-    def sr_direction_oracle(self, source, direction):
+    def sr_direction_oracle(self, source, direction, is_srm=False):
         direction_vec = np.array([direction[0].to_double(), direction[1].to_double()])
         direction_norm = np.linalg.norm(direction_vec)
         source_n = self.points_to_nodes[source]
+        if is_srm and source_n.is_sparse:
+            keys = source_n.sparse_connections.keys()
+        else:
+            keys = source_n.connections.keys()
         max_cos = -1
         found_neighbor = None
-        for neighbor in source_n.connections.keys():
+        for neighbor in keys:
             neighbor_vec = np.array([neighbor.point[0].to_double()-source[0].to_double(),
                                      neighbor.point[1].to_double()-source[1].to_double()])
             neighbor_norm = np.linalg.norm(neighbor_vec)
@@ -158,17 +161,6 @@ class PrmGraph:
                 found_neighbor = neighbor.point
         # the else in the next line will only happen if source is dest and not connected to anything
         return found_neighbor if found_neighbor is not None else source
-
-    # def update_sparse_rep(self, old_p, new_p, cd):
-    #     items_to_remove = []
-    #     for v, d in self.points_to_nodes[old_p].rep_of.items():
-    #         dist_to_new = Euclidean_distance().transformed_distance(v.point, new_p)
-    #         if dist_to_new < d and cd.path_collision_free(v.point, new_p):
-    #             self.points_to_nodes[new_p].rep_of[v] = dist_to_new
-    #             items_to_remove.append(v)
-    #             v.sparse_rep = new_p
-    #     for v in items_to_remove:
-    #         self.points_to_nodes[old_p].rep_of.pop(v)
 
 
 def two_d_point_to_2n_d_point(p):
@@ -199,19 +191,101 @@ def generate_milestones(cd, n, max_x, max_y, min_x, min_y):
     return v
 
 
-def make_graph(cd, milestones, origin, destination):
+def update_spanner_reps(nn, g, spanner_point, cd):
+    ns = nn.neighbors_in_radius(spanner_point, FT(Config().sr_prm_config['sparse_radius']))
+    for n in ns:
+        if n not in g.points_to_nodes.keys():
+            continue
+        n_node = g.points_to_nodes[n]
+        if n_node.is_sparse or n_node.sparse_rep is None:
+            continue
+        dist_to_milestone = Euclidean_distance().transformed_distance(n, spanner_point)
+        if dist_to_milestone < n_node.sparse_rep[1] and cd.path_collision_free(n, spanner_point):
+            n_node.sparse_rep = (spanner_point, dist_to_milestone)
+
+
+def make_node_sparse(node, sparse_nn):
+    sparse_nn.add_point(node.point)
+    node.is_sparse = True
+    node.sparse_rep = None
+
+
+def add_guard_spanner(sparse_nn, milestone, g, nn, cd):
+    make_node_sparse(g.points_to_nodes[milestone], sparse_nn)
+    # update reps
+    update_spanner_reps(nn, g, milestone, cd)
+    # print("add_guard_spanner:", milestone)
+
+
+def add_bridge_spanner(g, cd, sparse_nn, milestone, ok_s_ns, nn):
+    is_bridge = False
+    for i in range(len(ok_s_ns)):
+        for j in range(i + 1, len(ok_s_ns)):
+            # TODO use union-find, this is very in efficient
+            if not g.has_path(ok_s_ns[i], ok_s_ns[j], is_sparse=True):
+                is_bridge = True
+                if cd.path_collision_free(ok_s_ns[i], ok_s_ns[j]):
+                    g.insert_edge(ok_s_ns[i], ok_s_ns[j], is_sparse=True)
+                    # print("e:", ok_s_ns[i], ok_s_ns[j])
+                    # print_sr_sparse_graph(g)
+                else:
+                    if not g.points_to_nodes[milestone].is_sparse:
+                        make_node_sparse(g.points_to_nodes[milestone], sparse_nn)
+                        # print("2:", milestone)
+                    g.insert_edge(ok_s_ns[i], milestone, is_sparse=True)
+                    g.insert_edge(ok_s_ns[j], milestone, is_sparse=True)
+                    update_spanner_reps(nn, g, milestone, cd)
+                    # print_sr_sparse_graph(g)
+    return is_bridge
+
+
+def add_pair_spanner(best_s_n, milestone, g, cd, sparse_nn, nn):
+    m_rep = best_s_n[0]
+    for c_n in g.points_to_nodes[milestone].connections.keys():
+        n_rep = c_n.sparse_rep
+        if n_rep is None:
+            continue
+        if m_rep != n_rep[0] and\
+                not g.points_to_nodes[n_rep[0]] in g.points_to_nodes[m_rep].sparse_connections.keys():
+            if cd.path_collision_free(m_rep, n_rep[0]):
+                g.insert_edge(m_rep, n_rep[0], is_sparse=True)
+                # print("e_ps:", m_rep, n_rep)
+                # print_sr_sparse_graph(g)
+            else:
+                # print_sr_sparse_graph(g)
+                # print("n_rep", n_rep[0][0], " ", n_rep[0][1])
+                # print("c_n", c_n.point[0], " ", c_n.point[1])
+                # print("m_rep", m_rep[0], " ", m_rep[1])
+                # print("milestone", milestone[0], " ", milestone[1])
+                if not g.points_to_nodes[milestone].is_sparse:
+                    make_node_sparse(g.points_to_nodes[milestone], sparse_nn)
+                    # print("3a:", milestone)
+                if not c_n.is_sparse:
+                    make_node_sparse(c_n, sparse_nn)
+                    # print("3b:", c_n.point)
+                g.insert_edge(m_rep, milestone, is_sparse=True)
+                g.insert_edge(n_rep[0], c_n.point, is_sparse=True)
+                g.insert_edge(milestone, c_n.point, is_sparse=True)
+                update_spanner_reps(nn, g, milestone, cd)
+                update_spanner_reps(nn, g, c_n.point, cd)
+                # print_sr_sparse_graph(g)
+                break
+
+
+def make_graph(cd, milestones, origin, destination, create_sparse):
     sparse_nn = NeighborsFinder([origin, destination])
     milestones += [origin, destination]
     nn = NeighborsFinder(milestones)
     g = PrmGraph()
     # init sparse graph
-    if cd.path_collision_free(origin, destination):
-        g.insert_edge(origin, destination, is_sparse=True)
-        # print("0od:", origin, destination)
-    else:
-        g.add_node(origin, is_sparse=True)
-        g.add_node(destination, is_sparse=True)
-        # print("1od:", origin, destination)
+    if create_sparse:
+        if cd.path_collision_free(origin, destination):
+            g.insert_edge(origin, destination, is_sparse=True)
+            # print("0od:", origin, destination)
+        else:
+            g.add_node(origin, is_sparse=True)
+            g.add_node(destination, is_sparse=True)
+            # print("1od:", origin, destination)
 
     for milestone in milestones:
         # the + 1 to number_of_neighbors is to count for count v as it's neighbor
@@ -221,87 +295,34 @@ def make_graph(cd, milestones, origin, destination):
                 g.insert_edge(milestone, neighbor)
 
         # from here we build the sparse graph
-        if g.points_to_nodes[milestone].is_sparse:
-            # to remove origin and dest
-            continue
-        s_ns = sparse_nn.neighbors_in_radius(milestone, FT(Config().sr_prm_config['sparse_radius']))
-        ok_s_ns = []
-        best_s_n = None
-        for s_n in s_ns:
-            if s_n == milestone:
+        if create_sparse:
+            if g.points_to_nodes[milestone].is_sparse:
+                # to remove origin and dest
                 continue
-            if cd.path_collision_free(milestone, s_n):
-                ok_s_ns.append(s_n)
-                dist = Euclidean_distance().transformed_distance(milestone, s_n)
-                if best_s_n is None or best_s_n[1] < dist:
-                    best_s_n = (s_n, dist)
-        if best_s_n is not None:
-            g.points_to_nodes[milestone].sparse_rep = best_s_n[0]
-            g.points_to_nodes[best_s_n[0]].rep_of[g.points_to_nodes[milestone]] = best_s_n[1]
-        # if no one is close this is now a sparse milestone
-        if best_s_n is None:
-            sparse_nn.add_point(milestone)
-            g.points_to_nodes[milestone].is_sparse = True
+            s_ns = sparse_nn.neighbors_in_radius(milestone, FT(Config().sr_prm_config['sparse_radius']))
+            ok_s_ns = []
+            best_s_n = None
             for s_n in s_ns:
                 if s_n == milestone:
                     continue
-                # g.update_sparse_rep(s_n, milestone, cd)
-            # print("1:", milestone)
-            continue
-        # add bridge in sparse spanner
-        is_bridge = False
-        for i in range(len(ok_s_ns)):
-            for j in range(i + 1, len(ok_s_ns)):
-                # TODO use union-find, this is very in efficient
-                if not g.has_path(ok_s_ns[i], ok_s_ns[j], is_sparse=True):
-                    is_bridge = True
-                    if cd.path_collision_free(ok_s_ns[i], ok_s_ns[j]):
-                        g.insert_edge(ok_s_ns[i], ok_s_ns[j], is_sparse=True)
-                        # print("e:", ok_s_ns[i], ok_s_ns[j])
-                        # print_sr_sparse_graph(g)
-                    else:
-                        if not g.points_to_nodes[milestone].is_sparse:
-                            g.points_to_nodes[milestone].is_sparse = True
-                            sparse_nn.add_point(milestone)
-                            # print("2:", milestone)
-                        g.insert_edge(ok_s_ns[i], milestone, is_sparse=True)
-                        g.insert_edge(ok_s_ns[j], milestone, is_sparse=True)
-                        # g.update_sparse_rep(ok_s_ns[i], milestone, cd)
-                        # g.update_sparse_rep(ok_s_ns[j], milestone, cd)
-                        # print_sr_sparse_graph(g)
-        if is_bridge:
-            continue
-        # # pair spanners
-        # m_rep = best_s_n[0]
-        # for c_n in g.points_to_nodes[milestone].connections.keys():
-        #     n_rep = c_n.sparse_rep
-        #     if n_rep is None:
-        #         continue
-        #     if m_rep != n_rep and\
-        #             not g.points_to_nodes[n_rep] in g.points_to_nodes[m_rep].sparse_connections.keys():
-        #         if cd.path_collision_free(m_rep, n_rep):
-        #             g.insert_edge(m_rep, n_rep, is_sparse=True)
-        #             # print("e_ps:", m_rep, n_rep)
-        #             print_sr_sparse_graph(g)
-        #         else:
-        #             if not g.points_to_nodes[milestone].is_sparse:
-        #                 g.points_to_nodes[milestone].is_sparse = True
-        #                 sparse_nn.add_point(milestone)
-        #                 print("3a:", milestone)
-        #             if not c_n.is_sparse:
-        #                 c_n.is_sparse = True
-        #                 sparse_nn.add_point(c_n.point)
-        #                 print("3b:", c_n.point)
-        #             g.insert_edge(m_rep, milestone, is_sparse=True)
-        #             g.insert_edge(c_n.sparse_rep, c_n.point, is_sparse=True)
-        #             g.insert_edge(milestone, c_n.point, is_sparse=True)
-        #             g.update_sparse_rep(m_rep, milestone, cd)
-        #             g.update_sparse_rep(c_n.sparse_rep, c_n.point, cd)
-        #             g.update_sparse_rep(milestone, c_n.point, cd)
-        #             g.update_sparse_rep(c_n.point, milestone, cd)
-        #
-        #             print_sr_sparse_graph(g)
-
+                if cd.path_collision_free(milestone, s_n):
+                    ok_s_ns.append(s_n)
+                    dist = Euclidean_distance().transformed_distance(milestone, s_n)
+                    if best_s_n is None or dist < best_s_n[1]:
+                        best_s_n = (s_n, dist)
+            # print_sr_sparse_graph(g)
+            if best_s_n is not None:
+                g.points_to_nodes[milestone].sparse_rep = best_s_n
+            # if no one is close this is now a sparse milestone
+            if best_s_n is None:
+                add_guard_spanner(sparse_nn, milestone, g, nn, cd)
+                continue
+            # add bridge in sparse spanner
+            is_bridge = add_bridge_spanner(g, cd, sparse_nn, milestone, ok_s_ns, nn)
+            if is_bridge:
+                continue
+            # pair spanners
+            add_pair_spanner(best_s_n, milestone, g, cd, sparse_nn, nn)
     return g
 
 
@@ -312,12 +333,32 @@ def print_sr_sparse_graph(g):
             # print("p:", v.point, "con", len(v.sparse_connections))
             for con in v.sparse_connections.keys():
                 plt.plot([v.point[0].to_double(), con.point[0].to_double()],
-                         [v.point[1].to_double(), con.point[1].to_double()])
+                         [v.point[1].to_double(), con.point[1].to_double()], color='black')
+        else:
+            if v.sparse_rep is not None:
+                plt.plot([v.point[0].to_double()], [v.point[1].to_double()], 'o', color='blue')
+                plt.plot([v.point[0].to_double(), v.sparse_rep[0][0].to_double()],
+                         [v.point[1].to_double(), v.sparse_rep[0][1].to_double()], color='blue')
+    # axes = plt.gca()
+    # axes.set_xlim([-1.7, 1.7])
+    # axes.set_ylim([-1.7, 1.7])
+    plt.savefig("temp/sparse_graph, T" + str(time.time()) + ".png")
+    plt.close()
+    for v in g.points_to_nodes.values():
+        if v.is_sparse:
+            plt.plot([v.point[0].to_double()], [v.point[1].to_double()], 'o', color='black')
+            # print("p:", v.point, "con", len(v.sparse_connections))
+            for con in v.sparse_connections.keys():
+                plt.plot([v.point[0].to_double(), con.point[0].to_double()],
+                         [v.point[1].to_double(), con.point[1].to_double()], color='black')
+    # axes = plt.gca()
+    # axes.set_xlim([-1.7, 1.7])
+    # axes.set_ylim([-1.7, 1.7])
     plt.savefig("temp/sparse_graph, T" + str(time.time()) + ".png")
     plt.close()
 
 
-def generate_graph(obstacles, origin, destination, cd):
+def generate_graph(obstacles, origin, destination, cd, create_sparse=False):
     # start = time.time()
     origin = two_d_point_to_2n_d_point(origin)
     destination = two_d_point_to_2n_d_point(destination)
@@ -327,7 +368,7 @@ def generate_graph(obstacles, origin, destination, cd):
         return False
     number_of_points_to_find = Config().sr_prm_config['number_of_milestones_to_find']
     milestones = generate_milestones(cd, number_of_points_to_find, max_x, max_y, min_x, min_y)
-    g = make_graph(cd, milestones, origin, destination)
+    g = make_graph(cd, milestones, origin, destination, create_sparse)
     if g.has_path(origin, destination):
         g.calc_bfs_dist_from_t(destination)
         g.calc_real_dist_from_t(destination)

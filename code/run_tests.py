@@ -37,13 +37,14 @@ def test_alg(alg, number_of_milestones_to_find_list, num_of_runs, robots, obstac
         else:
             print("0\n0\n0")
             res.append([0, 0, 0])
+    # add graphs here
 
 
 def generate_path(path, robots, obstacles, destination):
     print("running tests")
 
     num_of_runs = 10
-    number_of_milestones_to_find_list = [10, 15, 25, 35, 50, 70, 100]
+    number_of_milestones_to_find_list = [10, 15, 25, 35, 50, 70, 100, 150, 200, 300, 400, 500, 1000]
     # number_of_milestones_to_find_list = [15, 20]
     test_alg(srm_drrt, number_of_milestones_to_find_list, num_of_runs, robots, obstacles, destination)
     test_alg(drrt, number_of_milestones_to_find_list, num_of_runs, robots, obstacles, destination)
