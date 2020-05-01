@@ -10,13 +10,14 @@ class Config(object):
     def reset(self):
         # General configuration
         self.general_config = dict(
-            ROBOTS_COUNT=8,  # Amount of robots. Should match scene file. If lower, excess robots are ignored.
+            ROBOTS_COUNT=5,  # Amount of robots. Should match scene file.
             USE_FAST_CD=True,  # TODO not tested on false
             INFLATION_EPS=0.01
         )
         self.sr_prm_config = dict(
-            number_of_milestones_to_find=15,
-            number_of_neighbors_to_connect=15
+            number_of_milestones_to_find=150,
+            number_of_neighbors_to_connect=15,
+            sparse_radius=1
         )
         self.rrt_config = dict(
             k_nearest_to_connect_to_dest=30,

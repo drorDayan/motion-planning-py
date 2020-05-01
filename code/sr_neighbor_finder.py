@@ -27,7 +27,6 @@ class NeighborsFinder:
     def __init__(self, points):
         self.tree = Kd_tree()
         self.tree.insert(points)
-        self.points = points
 
     def tree_k_nn(self, query, k):
         search_nearest = True
@@ -39,8 +38,15 @@ class NeighborsFinder:
         search.k_neighbors(lst)
         return [x for x, y in lst]
 
+    def neighbors_in_radius(self, query, r):
+        epsilon = FT(0)
+        a = Fuzzy_sphere(query, r, epsilon)
+        res = []
+        self.tree.search(a, res)
+        return res
+
     def k_nn(self, query, k):
         return self.tree_k_nn(query, k)
-        sorted_vals = sorted(self.points, key=lambda a: Euclidean_distance().transformed_distance(query, a))
-        return sorted_vals[:k]
 
+    def add_point(self, p):
+        self.tree.insert(p)

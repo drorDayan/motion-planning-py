@@ -6,6 +6,7 @@ import queue
 import heapq
 import math
 import numpy as np
+import matplotlib.pyplot as plt
 
 ROBOTS_COUNT = Config().general_config['ROBOTS_COUNT']
 if ROBOTS_COUNT is None:
@@ -41,6 +42,8 @@ class PrmNode:
         self.srm_counter = Config().srm_drrt_config['sr_add_srm_once_in']
         self.is_sparse = is_sparse
         self.sparse_connections = {}
+        self.sparse_rep = None
+        self.rep_of = {}
 
 
 class PrmGraph:
@@ -73,7 +76,7 @@ class PrmGraph:
             p1_node.connections[p2_node] = dist
             p2_node.connections[p1_node] = dist
 
-    def has_path(self, p1, p2):
+    def has_path(self, p1, p2, is_sparse=False):
         if p1 not in self.points_to_nodes.keys() or p2 not in self.points_to_nodes.keys():
             return False
         q = queue.Queue()
@@ -84,7 +87,11 @@ class PrmGraph:
             if curr == p2:
                 return True
             else:
-                for next_n in self.points_to_nodes[curr].connections.keys():
+                if is_sparse:
+                    keys = self.points_to_nodes[curr].sparse_connections.keys()
+                else:
+                    keys = self.points_to_nodes[curr].connections.keys()
+                for next_n in keys:
                     next_p = next_n.point
                     if next_p not in visited:
                         visited[next_p] = True
@@ -152,6 +159,17 @@ class PrmGraph:
         # the else in the next line will only happen if source is dest and not connected to anything
         return found_neighbor if found_neighbor is not None else source
 
+    # def update_sparse_rep(self, old_p, new_p, cd):
+    #     items_to_remove = []
+    #     for v, d in self.points_to_nodes[old_p].rep_of.items():
+    #         dist_to_new = Euclidean_distance().transformed_distance(v.point, new_p)
+    #         if dist_to_new < d and cd.path_collision_free(v.point, new_p):
+    #             self.points_to_nodes[new_p].rep_of[v] = dist_to_new
+    #             items_to_remove.append(v)
+    #             v.sparse_rep = new_p
+    #     for v in items_to_remove:
+    #         self.points_to_nodes[old_p].rep_of.pop(v)
+
 
 def two_d_point_to_2n_d_point(p):
     n = Config().general_config['ROBOTS_COUNT']
@@ -189,9 +207,11 @@ def make_graph(cd, milestones, origin, destination):
     # init sparse graph
     if cd.path_collision_free(origin, destination):
         g.insert_edge(origin, destination, is_sparse=True)
+        # print("0od:", origin, destination)
     else:
         g.add_node(origin, is_sparse=True)
         g.add_node(destination, is_sparse=True)
+        # print("1od:", origin, destination)
 
     for milestone in milestones:
         # the + 1 to number_of_neighbors is to count for count v as it's neighbor
@@ -199,7 +219,102 @@ def make_graph(cd, milestones, origin, destination):
         for neighbor in nearest[1:]:  # first point is self and no need for edge from v to itself
             if cd.path_collision_free(milestone, neighbor):
                 g.insert_edge(milestone, neighbor)
+
+        # from here we build the sparse graph
+        if g.points_to_nodes[milestone].is_sparse:
+            # to remove origin and dest
+            continue
+        s_ns = sparse_nn.neighbors_in_radius(milestone, FT(Config().sr_prm_config['sparse_radius']))
+        ok_s_ns = []
+        best_s_n = None
+        for s_n in s_ns:
+            if s_n == milestone:
+                continue
+            if cd.path_collision_free(milestone, s_n):
+                ok_s_ns.append(s_n)
+                dist = Euclidean_distance().transformed_distance(milestone, s_n)
+                if best_s_n is None or best_s_n[1] < dist:
+                    best_s_n = (s_n, dist)
+        if best_s_n is not None:
+            g.points_to_nodes[milestone].sparse_rep = best_s_n[0]
+            g.points_to_nodes[best_s_n[0]].rep_of[g.points_to_nodes[milestone]] = best_s_n[1]
+        # if no one is close this is now a sparse milestone
+        if best_s_n is None:
+            sparse_nn.add_point(milestone)
+            g.points_to_nodes[milestone].is_sparse = True
+            for s_n in s_ns:
+                if s_n == milestone:
+                    continue
+                # g.update_sparse_rep(s_n, milestone, cd)
+            # print("1:", milestone)
+            continue
+        # add bridge in sparse spanner
+        is_bridge = False
+        for i in range(len(ok_s_ns)):
+            for j in range(i + 1, len(ok_s_ns)):
+                # TODO use union-find, this is very in efficient
+                if not g.has_path(ok_s_ns[i], ok_s_ns[j], is_sparse=True):
+                    is_bridge = True
+                    if cd.path_collision_free(ok_s_ns[i], ok_s_ns[j]):
+                        g.insert_edge(ok_s_ns[i], ok_s_ns[j], is_sparse=True)
+                        # print("e:", ok_s_ns[i], ok_s_ns[j])
+                        # print_sr_sparse_graph(g)
+                    else:
+                        if not g.points_to_nodes[milestone].is_sparse:
+                            g.points_to_nodes[milestone].is_sparse = True
+                            sparse_nn.add_point(milestone)
+                            # print("2:", milestone)
+                        g.insert_edge(ok_s_ns[i], milestone, is_sparse=True)
+                        g.insert_edge(ok_s_ns[j], milestone, is_sparse=True)
+                        # g.update_sparse_rep(ok_s_ns[i], milestone, cd)
+                        # g.update_sparse_rep(ok_s_ns[j], milestone, cd)
+                        # print_sr_sparse_graph(g)
+        if is_bridge:
+            continue
+        # # pair spanners
+        # m_rep = best_s_n[0]
+        # for c_n in g.points_to_nodes[milestone].connections.keys():
+        #     n_rep = c_n.sparse_rep
+        #     if n_rep is None:
+        #         continue
+        #     if m_rep != n_rep and\
+        #             not g.points_to_nodes[n_rep] in g.points_to_nodes[m_rep].sparse_connections.keys():
+        #         if cd.path_collision_free(m_rep, n_rep):
+        #             g.insert_edge(m_rep, n_rep, is_sparse=True)
+        #             # print("e_ps:", m_rep, n_rep)
+        #             print_sr_sparse_graph(g)
+        #         else:
+        #             if not g.points_to_nodes[milestone].is_sparse:
+        #                 g.points_to_nodes[milestone].is_sparse = True
+        #                 sparse_nn.add_point(milestone)
+        #                 print("3a:", milestone)
+        #             if not c_n.is_sparse:
+        #                 c_n.is_sparse = True
+        #                 sparse_nn.add_point(c_n.point)
+        #                 print("3b:", c_n.point)
+        #             g.insert_edge(m_rep, milestone, is_sparse=True)
+        #             g.insert_edge(c_n.sparse_rep, c_n.point, is_sparse=True)
+        #             g.insert_edge(milestone, c_n.point, is_sparse=True)
+        #             g.update_sparse_rep(m_rep, milestone, cd)
+        #             g.update_sparse_rep(c_n.sparse_rep, c_n.point, cd)
+        #             g.update_sparse_rep(milestone, c_n.point, cd)
+        #             g.update_sparse_rep(c_n.point, milestone, cd)
+        #
+        #             print_sr_sparse_graph(g)
+
     return g
+
+
+def print_sr_sparse_graph(g):
+    for v in g.points_to_nodes.values():
+        if v.is_sparse:
+            plt.plot([v.point[0].to_double()], [v.point[1].to_double()], 'o', color='black')
+            # print("p:", v.point, "con", len(v.sparse_connections))
+            for con in v.sparse_connections.keys():
+                plt.plot([v.point[0].to_double(), con.point[0].to_double()],
+                         [v.point[1].to_double(), con.point[1].to_double()])
+    plt.savefig("temp/sparse_graph, T" + str(time.time()) + ".png")
+    plt.close()
 
 
 def generate_graph(obstacles, origin, destination, cd):
@@ -216,6 +331,7 @@ def generate_graph(obstacles, origin, destination, cd):
     if g.has_path(origin, destination):
         g.calc_bfs_dist_from_t(destination)
         g.calc_real_dist_from_t(destination)
+        # print_sr_sparse_graph(g)
         return True, g
     else:
         print("failed to find a valid path in prm")
