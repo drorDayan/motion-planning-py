@@ -37,13 +37,30 @@ def test_alg(alg, number_of_milestones_to_find_list, num_of_runs, robots, obstac
         else:
             print("0\n0\n0")
             res.append([0, 0, 0])
-    # add graphs here
+    # here we create some graphs
+    plt.plot(number_of_milestones_to_find_list, [t for t, v, s in res])
+    plt.xlabel("number of milestones per prm road-map")
+    plt.title("average time to find solution (counting only successful tries)")
+    plt.savefig("output_graphs/"+alg_name+" average time to find solution.png")
+    plt.close()
+
+    plt.plot(number_of_milestones_to_find_list, [v for t, v, s in res])
+    plt.xlabel("number of milestones per prm road-map")
+    plt.title("C-space vertices until we found a solution (counting only successful tries)")
+    plt.savefig("output_graphs/"+alg_name+" average vertices to find solution.png")
+    plt.close()
+
+    plt.plot(number_of_milestones_to_find_list, [v for t, v, s in res])
+    plt.xlabel("number of milestones per prm road-map")
+    plt.title("success rate")
+    plt.savefig("output_graphs/"+alg_name+" success rate.png")
+    plt.close()
 
 
 def generate_path(path, robots, obstacles, destination):
     print("running tests")
 
-    num_of_runs = 10
+    num_of_runs = 20
     number_of_milestones_to_find_list = [10, 15, 25, 35, 50, 70, 100, 150, 200, 300, 400, 500, 1000]
     # number_of_milestones_to_find_list = [15, 20]
     test_alg(srm_drrt, number_of_milestones_to_find_list, num_of_runs, robots, obstacles, destination)
