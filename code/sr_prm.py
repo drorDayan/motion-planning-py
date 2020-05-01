@@ -288,6 +288,7 @@ def make_graph(cd, milestones, origin, destination, create_sparse):
             # print("1od:", origin, destination)
 
     for milestone in milestones:
+        g.add_node(milestone)
         # the + 1 to number_of_neighbors is to count for count v as it's neighbor
         nearest = nn.k_nn(milestone, Config().sr_prm_config['number_of_neighbors_to_connect'])
         for neighbor in nearest[1:]:  # first point is self and no need for edge from v to itself
