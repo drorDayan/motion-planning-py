@@ -33,13 +33,13 @@ elif ROBOTS_COUNT == 10:
     from libs.release_cgal_binddings.d20.arr2_epec_seg_ex import *
 
 
-def direction_oracle(prm_graphs, robot_num, near, new_point, is_srm=False):
+def direction_oracle(prm_graphs, robot_num, near, new_point, is_sparse=False):
     direction = [new_point[i]-near[i] for i in range(2*robot_num)]
     res_arr = [0 for _ in range(2*robot_num)]
     for rid in range(robot_num):
         next_p = prm_graphs[rid].sr_direction_oracle(sr_prm.xy_to_2n_d_point(near[2*rid], near[2*rid+1]),
                                                      sr_prm.xy_to_2n_d_point(direction[2*rid], direction[2*rid+1]),
-                                                     is_srm)
+                                                     is_sparse)
         # x = prm_graphs[rid].points_to_nodes[sr_prm.xy_to_2n_d_point(near[2*rid], near[2*rid+1])]
         # next_p = random.choice(list(x.connections.keys())).point  # TODO this is rand, not direction
         res_arr[2*rid], res_arr[2*rid+1] = next_p[0], next_p[1]

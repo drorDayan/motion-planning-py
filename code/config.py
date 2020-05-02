@@ -21,16 +21,19 @@ class Config(object):
         )
         self.rrt_config = dict(
             k_nearest_to_connect_to_dest=30,
-            steer_eta=4
+            steer_eta=4,
+            timeout=120
         )
         self.srm_rrt_config = dict(
             k_nearest_to_connect_to_dest=30,
-            steer_eta=4
+            steer_eta=4,
+            timeout=120
         )
         self.drrt_config = dict(
             num_of_points_to_add_in_expand=100,
             k_nearest_to_connect_to_dest=30,
-            timeout=120
+            timeout=120,
+            use_sparse=True
         )
         self.srm_drrt_config = dict(  # only the extra from drrt_config
             sr_add_srm_once_in=3,

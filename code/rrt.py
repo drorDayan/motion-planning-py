@@ -33,7 +33,8 @@ def try_connect_to_dest(graph, neighbor_finder, dest_point, collision_detector):
 # slower then old impl, why? TODO check this
 def generate_path(path, robots, obstacles, destination):
     # random.seed(1)  # for tests
-    start = time.time()
+    start_time = time.time()
+    timeout = Config().rrt_config['timeout']
     robot_num = len(robots)
     robot_width = FT(1)
     steer_eta = FT(Config().rrt_config['steer_eta'])
@@ -61,8 +62,14 @@ def generate_path(path, robots, obstacles, destination):
         if i % 100 == 0:
             if try_connect_to_dest(graph, neighbor_finder, dest_point, collision_detector):
                 break
+        if timeout is not None and (time.time() - start_time > timeout):
+            print("rrt timed out")
+            return 0, 0
+
     d_path = []
     graph[dest_point].get_path_to_here(d_path)
     for dp in d_path:
         path.append([Point_2(dp[2*i], dp[2*i+1]) for i in range(robot_num)])
-    print("finished, time= ", time.time() - start, "vertices amount: ", len(vertices), "steer_eta = ", steer_eta)
+    finish_time = time.time() - start_time
+    print("finished, time= ", finish_time, "vertices amount: ", len(vertices), "steer_eta = ", steer_eta)
+    return finish_time, len(vertices)
