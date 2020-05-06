@@ -103,6 +103,7 @@ def expand(robot_num, min_coord, max_coord, neighbor_finder, prm_g, vertices, ro
 
 def generate_path(path, robots, obstacles, destination):
     # random.seed(1)  # for tests
+    # print("kd_tree_dimension = ", get_kd_tree_dimension())
     # init config stuff
     start_time = time.time()
     timeout = Config().drrt_config['timeout']

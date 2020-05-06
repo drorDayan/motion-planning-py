@@ -67,6 +67,7 @@ class PrmGraph:
             p2_node = self.points_to_nodes[p2]
         if p1_node == p2_node:
             return
+        # noinspection PyArgumentList
         dist = math.sqrt(Euclidean_distance().transformed_distance(p1_node.point, p2_node.point).to_double())
         if is_sparse:
             p1_node.sparse_connections[p2_node] = dist
@@ -199,6 +200,7 @@ def update_spanner_reps(nn, g, spanner_point, cd):
         n_node = g.points_to_nodes[n]
         if n_node.is_sparse or n_node.sparse_rep is None:
             continue
+        # noinspection PyArgumentList
         dist_to_milestone = Euclidean_distance().transformed_distance(n, spanner_point)
         if dist_to_milestone < n_node.sparse_rep[1] and cd.path_collision_free(n, spanner_point):
             n_node.sparse_rep = (spanner_point, dist_to_milestone)
@@ -315,6 +317,7 @@ def make_graph(cd, milestones, origin, destination, create_sparse):
                     continue
                 if cd.path_collision_free(milestone, s_n):
                     ok_s_ns.append(s_n)
+                    # noinspection PyArgumentList
                     dist = Euclidean_distance().transformed_distance(milestone, s_n)
                     if best_s_n is None or dist < best_s_n[1]:
                         best_s_n = (s_n, dist)
@@ -350,17 +353,17 @@ def print_sr_sparse_graph(g):
                 plt.plot([v.point[0].to_double(), v.sparse_rep[0][0].to_double()],
                          [v.point[1].to_double(), v.sparse_rep[0][1].to_double()], color='blue')
     print(n_s_v)
-    axes = plt.gca()
-    axes.set_xlim([-1.7, 1.7])
-    axes.set_ylim([-1.7, 1.7])
-    plt.plot([-1.3, -1.3, -0.1, -0.1],
-             [1, 0.1, 0.1, 1], color='red')
-    plt.plot([0.1, 0.1, 1.3, 1.3],
-             [1, 0.1, 0.1, 1], color='red')
-    plt.plot([-1.3, -1.3, -0.1, -0.1, -1.3],
-             [-0.1, -1.3, -1.3, -0.1, -0.1], color='red')
-    plt.plot([0.1, 0.1, 1.3, 1.3, 0.1],
-             [-0.1, -1.3, -1.3, -0.1, -0.1], color='red')
+    # axes = plt.gca()
+    # axes.set_xlim([-1.7, 1.7])
+    # axes.set_ylim([-1.7, 1.7])
+    # plt.plot([-1.3, -1.3, -0.1, -0.1],
+    #          [1, 0.1, 0.1, 1], color='red')
+    # plt.plot([0.1, 0.1, 1.3, 1.3],
+    #          [1, 0.1, 0.1, 1], color='red')
+    # plt.plot([-1.3, -1.3, -0.1, -0.1, -1.3],
+    #          [-0.1, -1.3, -1.3, -0.1, -0.1], color='red')
+    # plt.plot([0.1, 0.1, 1.3, 1.3, 0.1],
+    #          [-0.1, -1.3, -1.3, -0.1, -0.1], color='red')
 
     plt.savefig("temp/sparse_graph, T" + str(time.time()) + ".png")
     plt.close()
@@ -371,17 +374,17 @@ def print_sr_sparse_graph(g):
             for con in v.sparse_connections.keys():
                 plt.plot([v.point[0].to_double(), con.point[0].to_double()],
                          [v.point[1].to_double(), con.point[1].to_double()], color='black')
-    axes = plt.gca()
-    axes.set_xlim([-1.7, 1.7])
-    axes.set_ylim([-1.7, 1.7])
-    plt.plot([-1.3, -1.3, -0.1, -0.1],
-             [1, 0.1, 0.1, 1], color='red')
-    plt.plot([0.1, 0.1, 1.3, 1.3],
-             [1, 0.1, 0.1, 1], color='red')
-    plt.plot([-1.3, -1.3, -0.1, -0.1, -1.3],
-             [-0.1, -1.3, -1.3, -0.1, -0.1], color='red')
-    plt.plot([0.1, 0.1, 1.3, 1.3, 0.1],
-             [-0.1, -1.3, -1.3, -0.1, -0.1], color='red')
+    # axes = plt.gca()
+    # axes.set_xlim([-1.7, 1.7])
+    # axes.set_ylim([-1.7, 1.7])
+    # plt.plot([-1.3, -1.3, -0.1, -0.1],
+    #          [1, 0.1, 0.1, 1], color='red')
+    # plt.plot([0.1, 0.1, 1.3, 1.3],
+    #          [1, 0.1, 0.1, 1], color='red')
+    # plt.plot([-1.3, -1.3, -0.1, -0.1, -1.3],
+    #          [-0.1, -1.3, -1.3, -0.1, -0.1], color='red')
+    # plt.plot([0.1, 0.1, 1.3, 1.3, 0.1],
+    #          [-0.1, -1.3, -1.3, -0.1, -0.1], color='red')
 
     plt.savefig("temp/sparse_graph, T" + str(time.time()) + ".png")
     plt.close()
