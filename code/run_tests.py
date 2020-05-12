@@ -12,14 +12,15 @@ from arr2_epec_seg_ex import *
 def run_alg(alg, num_of_runs, robots, obstacles, destination):
     path = []
     t_sum = 0
+    prm_t_sum = 0
     t_v = 0
     ok_r = 0
     for _ in range(num_of_runs):
-        start_t = time.time()
-        t, v = alg.generate_path(path, robots, obstacles, destination)
+        t, v, prm_t = alg.generate_path(path, robots, obstacles, destination)
         if t != 0:
             ok_r += 1
-            t_sum += float(time.time() - start_t)
+            t_sum += t
+            prm_t_sum += prm_t
             t_v += v
         path = []
         gc.collect()
@@ -27,10 +28,11 @@ def run_alg(alg, num_of_runs, robots, obstacles, destination):
         print(t_sum / ok_r)
         print(t_v / ok_r)
         print(ok_r)
-        return t_sum / ok_r, t_v / ok_r, ok_r
+        print(prm_t_sum)
+        return t_sum / ok_r, t_v / ok_r, ok_r, prm_t_sum / ok_r
     else:
-        print("0\n0\n0")
-        return 0, 0, 0
+        print("0\n0\n0\n")
+        return 0, 0, 0, 0
 
 
 def test_drrt_alg(alg, number_of_milestones_to_find_list, num_of_runs, robots, obstacles, destination, is_sparse):
@@ -69,13 +71,17 @@ def test_drrt_alg(alg, number_of_milestones_to_find_list, num_of_runs, robots, o
 
 def generate_path(path, robots, obstacles, destination):
     print("running tests")
+    print("drrt timeout=", Config().drrt_config['timeout'])
+    print("sparse factor=", Config().sr_prm_config['sparse_radius'])
 
     num_of_runs = 10
     # run_alg(srm_rrt, num_of_runs, robots, obstacles, destination)
     # run_alg(rrt, num_of_runs, robots, obstacles, destination)
     # return
     #  number_of_milestones_to_find_list = [25, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000, 1250, 1500]
-    number_of_milestones_to_find_list = [100, 250, 500, 750, 1000, 1250, 1500, 1750, 2000]
+    # number_of_milestones_to_find_list = [100, 250, 500, 750, 1000, 1250, 1500, 1750, 2000]
+    number_of_milestones_to_find_list = [100, 250, 500, 750, 1000, 1250, 1500, 2000]
+    # number_of_milestones_to_find_list = [10*t for t in range(1, 21)]
     res = []
     for alg in [srm_drrt, drrt]:
         for is_sparse in [True, False]:
@@ -84,13 +90,13 @@ def generate_path(path, robots, obstacles, destination):
             res.append(t_res)
 
     # here we create some graphs
-    plt.plot(number_of_milestones_to_find_list, [t for t, v, s in res[0]], linestyle='-', marker='o',
+    plt.plot(number_of_milestones_to_find_list, [t for t, v, s, prm_t in res[0]], linestyle='-', marker='o',
              label='sparse srm_drrt')
-    plt.plot(number_of_milestones_to_find_list, [t for t, v, s in res[1]], linestyle='-', marker='o',
+    plt.plot(number_of_milestones_to_find_list, [t for t, v, s, prm_t in res[1]], linestyle='-', marker='o',
              label='srm_drrt')
-    plt.plot(number_of_milestones_to_find_list, [t for t, v, s in res[2]], linestyle='-', marker='o',
+    plt.plot(number_of_milestones_to_find_list, [t for t, v, s, prm_t in res[2]], linestyle='-', marker='o',
              label='sparse drrt')
-    plt.plot(number_of_milestones_to_find_list, [t for t, v, s in res[3]], linestyle='-', marker='o',
+    plt.plot(number_of_milestones_to_find_list, [t for t, v, s, prm_t in res[3]], linestyle='-', marker='o',
              label='drrt')
     plt.legend()
     plt.xlabel("number of milestones per prm road-map")
@@ -98,13 +104,13 @@ def generate_path(path, robots, obstacles, destination):
     plt.savefig("output_graphs/average time to find solution.png")
     plt.close()
 
-    plt.plot(number_of_milestones_to_find_list, [v for t, v, s in res[0]], linestyle='-', marker='o',
+    plt.plot(number_of_milestones_to_find_list, [v for t, v, s, prm_t in res[0]], linestyle='-', marker='o',
              label='sparse srm_drrt')
-    plt.plot(number_of_milestones_to_find_list, [v for t, v, s in res[1]], linestyle='-', marker='o',
+    plt.plot(number_of_milestones_to_find_list, [v for t, v, s, prm_t in res[1]], linestyle='-', marker='o',
              label='srm_drrt')
-    plt.plot(number_of_milestones_to_find_list, [v for t, v, s in res[2]], linestyle='-', marker='o',
+    plt.plot(number_of_milestones_to_find_list, [v for t, v, s, prm_t in res[2]], linestyle='-', marker='o',
              label='sparse drrt')
-    plt.plot(number_of_milestones_to_find_list, [v for t, v, s in res[3]], linestyle='-', marker='o',
+    plt.plot(number_of_milestones_to_find_list, [v for t, v, s, prm_t in res[3]], linestyle='-', marker='o',
              label='drrt')
     plt.legend()
     plt.xlabel("number of milestones per prm road-map")
@@ -112,13 +118,13 @@ def generate_path(path, robots, obstacles, destination):
     plt.savefig("output_graphs/average vertices to find solution.png")
     plt.close()
 
-    plt.plot(number_of_milestones_to_find_list, [s for t, v, s in res[0]], linestyle='-', marker='o',
+    plt.plot(number_of_milestones_to_find_list, [s for t, v, s, prm_t in res[0]], linestyle='-', marker='o',
              label='sparse srm_drrt')
-    plt.plot(number_of_milestones_to_find_list, [s for t, v, s in res[1]], linestyle='-', marker='o',
+    plt.plot(number_of_milestones_to_find_list, [s for t, v, s, prm_t in res[1]], linestyle='-', marker='o',
              label='srm_drrt')
-    plt.plot(number_of_milestones_to_find_list, [s for t, v, s in res[2]], linestyle='-', marker='o',
+    plt.plot(number_of_milestones_to_find_list, [s for t, v, s, prm_t in res[2]], linestyle='-', marker='o',
              label='sparse drrt')
-    plt.plot(number_of_milestones_to_find_list, [s for t, v, s in res[3]], linestyle='-', marker='o',
+    plt.plot(number_of_milestones_to_find_list, [s for t, v, s, prm_t in res[3]], linestyle='-', marker='o',
              label='drrt')
     plt.legend()
     plt.xlabel("number of milestones per prm road-map")
@@ -126,6 +132,24 @@ def generate_path(path, robots, obstacles, destination):
     plt.savefig("output_graphs/success rate.png")
     plt.close()
 
+    plt.plot(number_of_milestones_to_find_list, [prm_t for t, v, s, prm_t in res[0]], linestyle='-', marker='o',
+             label='sparse srm_drrt')
+    plt.plot(number_of_milestones_to_find_list, [prm_t for t, v, s, prm_t in res[1]], linestyle='-', marker='o',
+             label='srm_drrt')
+    plt.plot(number_of_milestones_to_find_list, [prm_t for t, v, s, prm_t in res[2]], linestyle='-', marker='o',
+             label='sparse drrt')
+    plt.plot(number_of_milestones_to_find_list, [prm_t for t, v, s, prm_t in res[3]], linestyle='-', marker='o',
+             label='drrt')
+    plt.legend()
+    plt.xlabel("number of milestones per prm road-map")
+    plt.title("average time to build prm maps (counting only successful tries)")
+    plt.savefig("output_graphs/prm maps time.png")
+    plt.close()
+
+    test_info_file = open("output_graphs/test_info.txt", "w")
+    test_info_file.write(f"drrt timeout={Config().drrt_config['timeout']}\n")
+    test_info_file.write(f"sparse factor={Config().sr_prm_config['sparse_radius']}\n")
+    test_info_file.close()
     # run_alg(srm_rrt, num_of_runs, robots, obstacles, destination)
     # run_alg(rrt, num_of_runs, robots, obstacles, destination)
     print("finish")

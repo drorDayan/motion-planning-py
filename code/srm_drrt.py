@@ -122,8 +122,9 @@ def generate_path(path, robots, obstacles, destination):
 
     prm_graphs = create_prm_graphs(robot_num, obstacles, start_point, dest_point, robot_width, create_sparse=is_sparse)
     if len(prm_graphs) == 0:
-        return 0, 0
-    print("calculated prm maps, time= ", time.time() - start_time)
+        return 0, 0, 0
+    prm_maps_time = time.time() - start_time
+    print("calculated prm maps, time= ", prm_maps_time)
 
     vertices = [start_point]
     graph = {start_point: DrrtNode(start_point)}
@@ -137,7 +138,7 @@ def generate_path(path, robots, obstacles, destination):
         # print_ver_graph(str(time.time() - start_time), vertices, robot_num)
         if timeout is not None and (time.time() - start_time > timeout):
             print("dRRT timed out")
-            return 0, 0
+            return 0, 0, 0
 
     # write path to output
     d_path = []
@@ -145,4 +146,4 @@ def generate_path(path, robots, obstacles, destination):
     for dp in d_path:
         path.append([Point_2(dp[2*i], dp[2*i+1]) for i in range(robot_num)])
     print("finished, time= ", time.time() - start_time, "vertices amount: ", len(vertices))
-    return time.time() - start_time, len(vertices)
+    return time.time() - start_time, len(vertices), prm_maps_time
