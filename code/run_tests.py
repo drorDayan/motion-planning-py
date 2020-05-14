@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import gc
 from config import *
 from arr2_epec_seg_ex import *
+import pickle
 
 
 def run_alg(alg, num_of_runs, robots, obstacles, destination):
@@ -80,7 +81,7 @@ def generate_path(path, robots, obstacles, destination):
     # return
     #  number_of_milestones_to_find_list = [25, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000, 1250, 1500]
     # number_of_milestones_to_find_list = [100, 250, 500, 750, 1000, 1250, 1500, 1750, 2000]
-    number_of_milestones_to_find_list = [100, 250, 500, 750, 1000, 1250, 1500, 2000]
+    number_of_milestones_to_find_list = [100, 250, 500, 750, 1000, 1250, 1500, 1750, 2000]
     # number_of_milestones_to_find_list = [10*t for t in range(1, 21)]
     res = []
     for alg in [srm_drrt, drrt]:
@@ -150,6 +151,26 @@ def generate_path(path, robots, obstacles, destination):
     test_info_file.write(f"drrt timeout={Config().drrt_config['timeout']}\n")
     test_info_file.write(f"sparse factor={Config().sr_prm_config['sparse_radius']}\n")
     test_info_file.close()
+
+    pickle.dump(res, open("output_graphs/pickled_results.p", "wb"))
+    pickle.dump(Config(), open("output_graphs/pickled_config.p", "wb"))
+
+    # res = pickle.load(open("output_graphs/pickled_results.p", "rb"))
+
+    plt.plot(number_of_milestones_to_find_list, [t-prm_t for t, v, s, prm_t in res[0]], linestyle='-', marker='o',
+             label='sparse srm_drrt')
+    plt.plot(number_of_milestones_to_find_list, [t-prm_t for t, v, s, prm_t in res[1]], linestyle='-', marker='o',
+             label='srm_drrt')
+    plt.plot(number_of_milestones_to_find_list, [t-prm_t for t, v, s, prm_t in res[2]], linestyle='-', marker='o',
+             label='sparse drrt')
+    plt.plot(number_of_milestones_to_find_list, [t-prm_t for t, v, s, prm_t in res[3]], linestyle='-', marker='o',
+             label='drrt')
+    plt.legend()
+    plt.xlabel("number of milestones per prm road-map")
+    plt.title("average time the dRRT run on the composite road-maps (counting only successful tries)")
+    plt.savefig("output_graphs/time the dRRT run on the composite.png")
+    plt.close()
+
     # run_alg(srm_rrt, num_of_runs, robots, obstacles, destination)
     # run_alg(rrt, num_of_runs, robots, obstacles, destination)
     print("finish")
