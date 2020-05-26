@@ -1,3 +1,4 @@
+import heapq
 from config import *
 ROBOTS_COUNT = Config().general_config['ROBOTS_COUNT']
 if ROBOTS_COUNT is None:
@@ -20,7 +21,6 @@ elif ROBOTS_COUNT == 9:
     from libs.release_cgal_binddings.d18.arr2_epec_seg_ex import *
 elif ROBOTS_COUNT == 10:
     from libs.release_cgal_binddings.d20.arr2_epec_seg_ex import *
-import heapq
 
 
 # TODO find best
@@ -79,8 +79,8 @@ class NeighborsFinder:
 
     def get_k_nearest(self, point, k):
         nn = self.__tree_k_nn(point, k)
-        heap_nn = [(d, n) for n, d in nn]
+        heap_nn = [(nn[i][1], i, nn[i][0]) for i in range(len(nn))]
         heapq.heapify(heap_nn)
-        return [heapq.heappop(heap_nn)[1] for _ in range(min(k, len(heap_nn)))]
+        return [heapq.heappop(heap_nn)[-1] for _ in range(min(k, len(heap_nn)))]
 
 

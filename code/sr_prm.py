@@ -184,11 +184,23 @@ def get_min_max(obstacles):
 
 def generate_milestones(cd, n, max_x, max_y, min_x, min_y):
     v = []
-    while len(v) < n:
-        x = FT(random.uniform(min_x, max_x))
-        y = FT(random.uniform(min_y, max_y))
-        if cd.is_valid_conf(Point_2(x, y)):
-            v.append(xy_to_2n_d_point(x, y))
+    if Config().sr_prm_config['use_grid']:
+        diff = FT(Config().sr_prm_config['grid_size'])
+        Config().sr_prm_config['number_of_neighbors_to_connect'] = 8
+        x = FT(min_x)
+        while x < FT(max_x):
+            y = FT(min_y)
+            while y < FT(max_y):
+                if cd.is_valid_conf(Point_2(x, y)):
+                    v.append(xy_to_2n_d_point(x, y))
+                y += diff
+            x += diff
+    else:
+        while len(v) < n:
+            x = FT(random.uniform(min_x, max_x))
+            y = FT(random.uniform(min_y, max_y))
+            if cd.is_valid_conf(Point_2(x, y)):
+                v.append(xy_to_2n_d_point(x, y))
     return v
 
 
@@ -203,6 +215,10 @@ def update_spanner_reps(nn, g, spanner_point, cd):
         # noinspection PyArgumentList
         dist_to_milestone = Euclidean_distance().transformed_distance(n, spanner_point)
         if dist_to_milestone < n_node.sparse_rep[1] and cd.path_collision_free(n, spanner_point):
+            old_rep = n_node.sparse_rep[0]
+            if not g.points_to_nodes[old_rep] in g.points_to_nodes[spanner_point].sparse_connections.keys() and \
+                    cd.path_collision_free(old_rep, spanner_point):
+                g.insert_edge(old_rep, spanner_point, is_sparse=True)
             n_node.sparse_rep = (spanner_point, dist_to_milestone)
 
 
@@ -401,7 +417,7 @@ def generate_graph(obstacles, origin, destination, cd, create_sparse=False):
     number_of_points_to_find = Config().sr_prm_config['number_of_milestones_to_find']
     milestones = generate_milestones(cd, number_of_points_to_find, max_x, max_y, min_x, min_y)
     g = make_graph(cd, milestones, origin, destination, create_sparse)
-    if g.has_path(origin, destination):
+    if g.has_path(origin, destination, create_sparse):
         g.calc_bfs_dist_from_t(destination)
         g.calc_real_dist_from_t(destination)
         # print_sr_sparse_graph(g)

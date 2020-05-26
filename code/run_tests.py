@@ -71,6 +71,7 @@ def test_drrt_alg(alg, number_of_milestones_to_find_list, num_of_runs, robots, o
 
 
 def generate_path(path, robots, obstacles, destination):
+    # gen_sparse_comp_graphs()
     print("running tests")
     print("drrt timeout=", Config().drrt_config['timeout'])
     print("sparse factor=", Config().sr_prm_config['sparse_radius'])
@@ -83,6 +84,7 @@ def generate_path(path, robots, obstacles, destination):
     # number_of_milestones_to_find_list = [100, 250, 500, 750, 1000, 1250, 1500, 1750, 2000]
     number_of_milestones_to_find_list = [100, 250, 500, 750, 1000, 1250, 1500, 1750, 2000]
     # number_of_milestones_to_find_list = [10*t for t in range(1, 21)]
+    # number_of_milestones_to_find_list = [1]
     res = []
     for alg in [srm_drrt, drrt]:
         for is_sparse in [True, False]:
@@ -174,3 +176,70 @@ def generate_path(path, robots, obstacles, destination):
     # run_alg(srm_rrt, num_of_runs, robots, obstacles, destination)
     # run_alg(rrt, num_of_runs, robots, obstacles, destination)
     print("finish")
+
+
+def gen_sparse_comp_graphs():
+    number_of_milestones_to_find_list = [100, 250, 500, 750, 1000, 1250, 1500, 1750, 2000]
+    res4 = pickle.load(open("output_graphs/warehouse01/sparse 4/pickled_results.p", "rb"))
+    res3 = pickle.load(open("output_graphs/warehouse01/sparse 3/pickled_results.p", "rb"))
+    res2 = pickle.load(open("output_graphs/warehouse01/sparse 2/pickled_results.p", "rb"))
+    plt.plot(number_of_milestones_to_find_list, [t for t, v, s, prm_t in res2[0]], linestyle='-', marker='o',
+             label='sparse2 srm_drrt')
+    plt.plot(number_of_milestones_to_find_list, [t for t, v, s, prm_t in res3[0]], linestyle='-', marker='o',
+             label='sparse3 srm_drrt')
+    plt.plot(number_of_milestones_to_find_list, [t for t, v, s, prm_t in res4[0]], linestyle='-', marker='o',
+             label='sparse4 srm_drrt')
+    plt.legend()
+    plt.xlabel("number of milestones per prm road-map")
+    plt.title("average time to find solution (counting only successful tries)")
+    plt.savefig("output_graphs/average time to find solution.png")
+    plt.close()
+
+    plt.plot(number_of_milestones_to_find_list, [v for t, v, s, prm_t in res2[0]], linestyle='-', marker='o',
+             label='sparse2 srm_drrt')
+    plt.plot(number_of_milestones_to_find_list, [v for t, v, s, prm_t in res3[0]], linestyle='-', marker='o',
+             label='sparse3 srm_drrt')
+    plt.plot(number_of_milestones_to_find_list, [v for t, v, s, prm_t in res4[0]], linestyle='-', marker='o',
+             label='sparse4 srm_drrt')
+    plt.legend()
+    plt.xlabel("number of milestones per prm road-map")
+    plt.title("C-space vertices until we found a solution (counting only successful tries)")
+    plt.savefig("output_graphs/average vertices to find solution.png")
+    plt.close()
+
+    plt.plot(number_of_milestones_to_find_list, [s for t, v, s, prm_t in res2[0]], linestyle='-', marker='o',
+             label='sparse2 srm_drrt')
+    plt.plot(number_of_milestones_to_find_list, [s for t, v, s, prm_t in res3[0]], linestyle='-', marker='o',
+             label='sparse3 srm_drrt')
+    plt.plot(number_of_milestones_to_find_list, [s for t, v, s, prm_t in res4[0]], linestyle='-', marker='o',
+             label='sparse4 srm_drrt')
+    plt.legend()
+    plt.xlabel("number of milestones per prm road-map")
+    plt.title("success rate")
+    plt.savefig("output_graphs/success rate.png")
+    plt.close()
+
+    plt.plot(number_of_milestones_to_find_list, [prm_t for t, v, s, prm_t in res2[0]], linestyle='-', marker='o',
+             label='sparse2 srm_drrt')
+    plt.plot(number_of_milestones_to_find_list, [prm_t for t, v, s, prm_t in res3[0]], linestyle='-', marker='o',
+             label='sparse3 srm_drrt')
+    plt.plot(number_of_milestones_to_find_list, [prm_t for t, v, s, prm_t in res4[0]], linestyle='-', marker='o',
+             label='sparse4 srm_drrt')
+    plt.legend()
+    plt.xlabel("number of milestones per prm road-map")
+    plt.title("average time to build prm maps (counting only successful tries)")
+    plt.savefig("output_graphs/prm maps time.png")
+    plt.close()
+
+    plt.plot(number_of_milestones_to_find_list, [t-prm_t for t, v, s, prm_t in res2[0]], linestyle='-', marker='o',
+             label='sparse2 srm_drrt')
+    plt.plot(number_of_milestones_to_find_list, [t-prm_t for t, v, s, prm_t in res3[0]], linestyle='-', marker='o',
+             label='sparse3 srm_drrt')
+    plt.plot(number_of_milestones_to_find_list, [t-prm_t for t, v, s, prm_t in res4[0]], linestyle='-', marker='o',
+             label='sparse4 srm_drrt')
+    plt.legend()
+    plt.xlabel("number of milestones per prm road-map")
+    plt.title("average time dRRT run on the composite roadmaps (only successful tries)")
+    plt.savefig("output_graphs/time the dRRT run on the composite.png")
+    plt.close()
+    print("fin with gen_sparse_comp_graphs")
